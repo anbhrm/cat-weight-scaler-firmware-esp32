@@ -1,0 +1,22 @@
+# Device and network credentials
+firmware/cat_toilet_monitor/secrets.h
+
+# Arduino / PlatformIO build products
+.build/
+**/build/
+**/.pio/
+*.bin
+*.elf
+*.hex
+*.map
+
+# Local editor and agent state
+.serena/
+.idea/
+.vscode/
+*.swp
+
+# OS metadata
+.DS_Store
+Thumbs.db
+
