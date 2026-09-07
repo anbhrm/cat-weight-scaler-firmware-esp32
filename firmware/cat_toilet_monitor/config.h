@@ -8,14 +8,9 @@ namespace CatScaleConfig {
 static_assert(CatScaleSecrets::CONFIGURED,
               "Copy secrets.example.h to secrets.h and configure it before building.");
 
-constexpr char FIRMWARE_VERSION[] = "0.2.0";
+constexpr char FIRMWARE_VERSION[] = "0.3.0";
 constexpr char DEVICE_ID[] = "toilet-1";
-constexpr char DIAGNOSTIC_AP_SSID[] = "CatToilet-toilet-1";
-
-static_assert(sizeof(CatScaleSecrets::DIAGNOSTIC_AP_PASSWORD) >= 9,
-              "DIAGNOSTIC_AP_PASSWORD must contain at least 8 characters.");
-static_assert(sizeof(CatScaleSecrets::DIAGNOSTIC_AP_PASSWORD) <= 64,
-              "DIAGNOSTIC_AP_PASSWORD must contain no more than 63 characters.");
+constexpr char WIFI_HOSTNAME[] = "cat-toilet-toilet-1";
 
 // XIAO ESP32C3: D1/GPIO3, D2/GPIO4, D6/GPIO21.
 constexpr uint8_t PIN_HX711_DOUT = 3;
@@ -60,14 +55,17 @@ constexpr uint32_t MAINTENANCE_LONG_PRESS_MS = 8000;
 
 constexpr uint32_t NTP_REFRESH_INTERVAL_MS = 10000;
 constexpr uint32_t WIFI_RETRY_INTERVAL_MS = 10000;
+constexpr uint32_t WIFI_RADIO_RESET_AFTER_MS = 60000;
+constexpr uint32_t WIFI_RADIO_RESET_INTERVAL_MS = 2UL * 60UL * 1000UL;
 constexpr uint32_t NETWORK_POLL_INTERVAL_MS = 500;
-constexpr uint32_t HTTP_TIMEOUT_MS = 5000;
+constexpr uint32_t HTTP_CONNECT_TIMEOUT_MS = 5000;
+constexpr uint32_t HTTP_RESPONSE_TIMEOUT_MS = 30000;
 constexpr uint16_t DIAGNOSTIC_HTTP_PORT = 80;
+constexpr uint32_t DIAGNOSTIC_POLL_INTERVAL_MS = 25;
 constexpr uint32_t DIAGNOSTIC_REQUEST_TIMEOUT_MS = 500;
 constexpr size_t DIAGNOSTIC_REQUEST_MAX_BYTES = 1024;
-constexpr uint8_t DIAGNOSTIC_MAX_CLIENTS = 2;
-constexpr uint32_t MAX_BACKOFF_MS = 60UL * 60UL * 1000UL;
-constexpr uint8_t MAX_EVENT_RETRY_EXPONENT = 5;
+constexpr uint8_t MAX_WEBHOOK_RETRIES = 3;
+constexpr uint8_t MAX_WEBHOOK_ATTEMPTS = 1 + MAX_WEBHOOK_RETRIES;
 
 constexpr size_t MAX_QUEUE_EVENTS = 500;
 constexpr uint8_t MAX_QUEUE_PERCENT = 70;

@@ -9,10 +9,10 @@
 - 約10 Hzの重量測定、外れ値除去、5点移動中央値
 - 重量変化による利用開始・退出の状態管理
 - 安定区間からの猫体重と利用前後差（排泄量）の算出
-- イベントをLittleFSへ先に保存し、別タスクからHTTPSで再送
+- イベントをLittleFSへ先に保存し、別タスクからHTTPSで送信
 - `event_id` と `Idempotency-Key` による重複送信対策
 - NTP同期後のJST（`+09:00`）時刻付与
-- 自宅Wi-Fiと併用できる読み取り専用の診断Wi-Fi
+- 自宅LANから開ける読み取り専用の診断画面
 - 長押しボタンによる手動風袋引きとメンテナンスモード
 
 ## ディレクトリ構成
@@ -71,7 +71,6 @@ constexpr char WIFI_SSID[] = "your-2.4GHz-wifi";
 constexpr char WIFI_PASSWORD[] = "your-wifi-password";
 constexpr char WEBHOOK_URL[] = "https://example.com/webhook";
 constexpr char WEBHOOK_BEARER_TOKEN[] = "optional-token";
-constexpr char DIAGNOSTIC_AP_PASSWORD[] = "8-to-63-character-password";
 constexpr char WEBHOOK_CA_CERT[] = R"EOF(-----BEGIN CERTIFICATE-----
 ...
 -----END CERTIFICATE-----
@@ -129,17 +128,22 @@ constexpr char WEBHOOK_CA_CERT[] = R"EOF(-----BEGIN CERTIFICATE-----
 
 ## 診断画面
 
-実運用ファームウェアは自宅Wi-Fiへの接続と同時に、診断用アクセスポイントを常時起動します。
+実運用ファームウェアは、自宅Wi-Fiから割り当てられたIPアドレスで診断画面を提供します。独自の診断用アクセスポイントは起動しません。
 
-1. スマートフォンをSSID `CatToilet-toilet-1` へ接続します。
-2. `secrets.h` に設定した `DIAGNOSTIC_AP_PASSWORD` を入力します。
-3. ブラウザーで `http://192.168.4.1/` を開きます。
+1. 書き込み後、115200 bpsのシリアルモニターを開きます。
+2. `diagnostic=ready url=http://.../` と表示されたURLを確認します。
+3. スマートフォンやPCをXIAOと同じ家庭内LANへ接続します。
+4. 表示されたURLをブラウザーで開きます。
 
-「インターネット接続なし」と表示されても、診断画面への接続には問題ありません。画面は読み取り専用で、パスワード、Bearer token、Webhook URLは表示しません。
+DHCPホスト名は `cat-toilet-toilet-1` です。IPアドレスはルーターによって変わることがあり、変更時は新しいURLがシリアルへ表示されます。ゲストWi-Fiや端末間通信を禁止するAP隔離が有効なネットワークでは開けません。Wi-Fi切断中も測定とLittleFSへの保存は続きますが、診断画面は復旧まで利用できません。
+
+画面は読み取り専用で、Wi-Fiパスワード、Bearer token、Webhook URLは表示しません。Webhookが応答待ちの間も、診断画面は別タスクで応答します。
 
 ## Webhook
 
-HTTP 2xxを送信成功として扱います。408、429、5xx、通信失敗は指数バックオフで再送し、その他の4xxと3xxは恒久エラーとしてLittleFS内の隔離領域へ移します。NTP同期前は送信せず、イベントを端末内へ保持します。
+HTTP 2xxを送信成功として扱います。408、429、5xxを含むすべての非2xx応答は再送せず、LittleFS内の隔離領域へ移します。タイムアウト、TLS失敗、切断などHTTPステータスを受け取れなかった通信障害だけを、約5秒、15秒、1分の間隔で最大3回再送します。初回を含むHTTPリクエスト数は最大4回です。
+
+接続確立のタイムアウトは5秒、HTTP応答待ちはCloud Functionsのコールドスタートを考慮して30秒です。2xx受信後にローカルファイルの削除が失敗した場合も、同じイベントをHTTPで再送せず送信対象外へ隔離します。Wi-Fi未接続またはNTP同期前は送信を開始せず、イベントを端末内へ保持します。
 
 送信例:
 
@@ -160,7 +164,7 @@ HTTP 2xxを送信成功として扱います。408、429、5xx、通信失敗は
   "time_quality": "synced",
   "termination_reason": "normal",
   "queue_dropped_count": 0,
-  "firmware_version": "0.2.0"
+  "firmware_version": "0.3.0"
 }
 ```
 
@@ -171,10 +175,11 @@ HTTP 2xxを送信成功として扱います。408、429、5xx、通信失敗は
 - `Copy secrets.example.h to secrets.h...` でコンパイルが止まる: `secrets.h` を作成し、設定後に `CONFIGURED = true` へ変更します。
 - `HX711 not ready` または `SENSOR_FAULT`: 3V3、GND、DOUT、SCKとロードセル側の4端子を確認します。
 - `webhook=disabled reason=url_or_ca_missing`: `WEBHOOK_URL` と `WEBHOOK_CA_CERT` を設定します。
+- 診断URLが表示されない: 自宅Wi-FiのSSIDとパスワード、2.4 GHzの電波状態を確認します。
+- 診断URLを開けない: スマートフォンやPCが同じ家庭内LANにあり、ゲストWi-FiやAP隔離を使用していないことを確認します。
 - USBポートが表示されない: データ通信対応USBケーブル、USBポート、XIAOのブート操作を確認します。
 - 重量の符号が逆、または位置で大きく変わる: ロードセルを1個ずつ確認し、4個の向き、同名端子の並列接続、受圧位置を見直します。
 
 ## 注意事項
 
 本ファームウェアと自作計量台は、医療機器や取引用のはかりではありません。健康管理では単発の測定値だけで判断せず、継続的な傾向と猫の状態を合わせて確認してください。
-
