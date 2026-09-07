@@ -8,7 +8,7 @@ namespace CatScaleConfig {
 static_assert(CatScaleSecrets::CONFIGURED,
               "Copy secrets.example.h to secrets.h and configure it before building.");
 
-constexpr char FIRMWARE_VERSION[] = "0.3.0";
+constexpr char FIRMWARE_VERSION[] = "0.3.1";
 constexpr char DEVICE_ID[] = "toilet-1";
 constexpr char WIFI_HOSTNAME[] = "cat-toilet-toilet-1";
 

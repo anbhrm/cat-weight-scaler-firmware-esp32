@@ -328,6 +328,7 @@ void CatScaleNetworkManager::sendDiagnosticPage(WiFiClient& client, uint32_t now
   const uint32_t droppedCount = storageReady ? store_->droppedCount() : 0;
   const bool wifiConnected = WiFi.status() == WL_CONNECTED;
   const bool timeSynced = timeService_ != nullptr && timeService_->isSynced();
+  const bool tlsVerificationEnabled = strlen(CatScaleSecrets::WEBHOOK_CA_CERT) > 0;
 
   const bool fault = !storageReady || measurement.state == MonitorState::SENSOR_FAULT ||
                      measurement.state == MonitorState::TIMEOUT_BLOCKED;
@@ -432,6 +433,9 @@ void CatScaleNetworkManager::sendDiagnosticPage(WiFiClient& client, uint32_t now
   client.print(F("</table></section>"));
 
   client.print(F("<section class=\"card\"><h2>保存とWebhook</h2><table>"));
+  printRowStart(client, F("TLS証明書検証"));
+  client.print(tlsVerificationEnabled ? F("有効") : F("無効"));
+  printRowEnd(client);
   printRowStart(client, F("LittleFS")); client.print(storageReady ? F("利用可能") : F("異常")); printRowEnd(client);
   printRowStart(client, F("未送信件数")); client.print(pendingCount); printRowEnd(client);
   printRowStart(client, F("隔離件数")); client.print(failedCount); printRowEnd(client);
@@ -639,16 +643,19 @@ bool CatScaleNetworkManager::postEvent(const PendingEvent& pending, int& statusC
   Serial.print(lastWebhookAttemptNumber_);
   Serial.print('/');
   Serial.println(CatScaleConfig::MAX_WEBHOOK_ATTEMPTS);
-  if (strlen(CatScaleSecrets::WEBHOOK_URL) == 0 ||
-      strlen(CatScaleSecrets::WEBHOOK_CA_CERT) == 0) {
-    Serial.println(F("webhook=disabled reason=url_or_ca_missing"));
-    lastWebhookResult_ = F("Webhook URLまたはルートCAが未設定");
+  if (strlen(CatScaleSecrets::WEBHOOK_URL) == 0) {
+    Serial.println(F("webhook=disabled reason=url_missing"));
+    lastWebhookResult_ = F("Webhook URL未設定");
     ++consecutiveWebhookFailures_;
     return false;
   }
 
   WiFiClientSecure client;
-  client.setCACert(CatScaleSecrets::WEBHOOK_CA_CERT);
+  if (strlen(CatScaleSecrets::WEBHOOK_CA_CERT) == 0) {
+    client.setInsecure();
+  } else {
+    client.setCACert(CatScaleSecrets::WEBHOOK_CA_CERT);
+  }
   HTTPClient http;
   http.setConnectTimeout(CatScaleConfig::HTTP_CONNECT_TIMEOUT_MS);
   http.setTimeout(CatScaleConfig::HTTP_RESPONSE_TIMEOUT_MS);

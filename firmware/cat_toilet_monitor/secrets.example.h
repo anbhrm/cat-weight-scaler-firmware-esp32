@@ -11,9 +11,9 @@ constexpr char WIFI_PASSWORD[] = "REPLACE_WITH_WIFI_PASSWORD";
 constexpr char WEBHOOK_URL[] = "https://example.invalid/webhook";
 constexpr char WEBHOOK_BEARER_TOKEN[] = "";
 
-// Use the CA certificate that signs the webhook host. Never disable TLS verification.
-// This placeholder intentionally prevents a successful TLS connection until
-// the certificate is configured for the actual endpoint.
+// Set the CA certificate that signs the webhook host to enable certificate
+// verification. Leave this as an empty string to send HTTPS without verifying
+// the server certificate.
 constexpr char WEBHOOK_CA_CERT[] = "";
 
 }  // namespace CatScaleSecrets

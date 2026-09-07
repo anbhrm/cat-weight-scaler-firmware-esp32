@@ -79,7 +79,7 @@ constexpr char WEBHOOK_CA_CERT[] = R"EOF(-----BEGIN CERTIFICATE-----
 }
 ```
 
-`WEBHOOK_CA_CERT` にはWebhookホストの証明書を検証できるルートCA証明書をPEM形式で設定します。TLS検証を無効にする実装にはしていません。
+`WEBHOOK_CA_CERT` にWebhookホストを検証できるルートCA証明書をPEM形式で設定すると、TLS証明書検証が有効になります。空文字のままにするとHTTPS通信は行いますが、サーバー証明書を検証しません。`secrets.example.h` の初期値は空文字です。
 
 `secrets.h` は `.gitignore` で除外されています。Wi-Fiパスワード、Bearer token、Webhook URL、証明書の秘密鍵などをコミットしないでください。テンプレートの `secrets.example.h` へ実値を書き込むことも避けてください。
 
@@ -145,6 +145,8 @@ HTTP 2xxを送信成功として扱います。408、429、5xxを含むすべて
 
 接続確立のタイムアウトは5秒、HTTP応答待ちはCloud Functionsのコールドスタートを考慮して30秒です。2xx受信後にローカルファイルの削除が失敗した場合も、同じイベントをHTTPで再送せず送信対象外へ隔離します。Wi-Fi未接続またはNTP同期前は送信を開始せず、イベントを端末内へ保持します。
 
+`WEBHOOK_CA_CERT` が1文字以上なら `setCACert()` で証明書を検証し、空文字なら `setInsecure()` で検証なしのHTTPS送信を行います。現在の設定状態はLAN内診断画面の「TLS証明書検証」で確認できます。
+
 送信例:
 
 ```json
@@ -164,7 +166,7 @@ HTTP 2xxを送信成功として扱います。408、429、5xxを含むすべて
   "time_quality": "synced",
   "termination_reason": "normal",
   "queue_dropped_count": 0,
-  "firmware_version": "0.3.0"
+  "firmware_version": "0.3.1"
 }
 ```
 
@@ -174,7 +176,7 @@ HTTP 2xxを送信成功として扱います。408、429、5xxを含むすべて
 
 - `Copy secrets.example.h to secrets.h...` でコンパイルが止まる: `secrets.h` を作成し、設定後に `CONFIGURED = true` へ変更します。
 - `HX711 not ready` または `SENSOR_FAULT`: 3V3、GND、DOUT、SCKとロードセル側の4端子を確認します。
-- `webhook=disabled reason=url_or_ca_missing`: `WEBHOOK_URL` と `WEBHOOK_CA_CERT` を設定します。
+- `webhook=disabled reason=url_missing`: `WEBHOOK_URL` を設定します。
 - 診断URLが表示されない: 自宅Wi-FiのSSIDとパスワード、2.4 GHzの電波状態を確認します。
 - 診断URLを開けない: スマートフォンやPCが同じ家庭内LANにあり、ゲストWi-FiやAP隔離を使用していないことを確認します。
 - USBポートが表示されない: データ通信対応USBケーブル、USBポート、XIAOのブート操作を確認します。
